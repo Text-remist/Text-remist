@@ -5,14 +5,6 @@ from player import Player
 # Initialize Pygame
 pygame.init()
 
-# Constants for the window dimensions
-width = 500
-height = 500
-
-# Set up the display window
-win = pygame.display.set_mode((width, height))
-pygame.display.set_caption("Client")
-
 def redrawWindow(win, player, other_players):
     win.fill((255, 255, 255))
     player.draw(win)
@@ -21,13 +13,22 @@ def redrawWindow(win, player, other_players):
     pygame.display.update()
 
 def main():
-    run = True
     n = Network()
-    p = n.getP()  # Assume this retrieves the initial player state
+    p = n.getP()
     if not p:
+        pygame.quit()
         print("Unable to connect to the server.")
         return
 
+
+    # Constants for the window dimensions
+    width = 500
+    height = 500
+
+    # Set up the display window
+    win = pygame.display.set_mode((width, height))
+    pygame.display.set_caption("Client")
+    run = True  # Assume this retrieves the initial player state
     clock = pygame.time.Clock()
 
     while run:
