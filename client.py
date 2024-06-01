@@ -24,6 +24,10 @@ def main():
     run = True
     n = Network()
     p = n.getP()  # Assume this retrieves the initial player state
+    if not p:
+        print("Unable to connect to the server.")
+        return
+
     clock = pygame.time.Clock()
 
     while run:
