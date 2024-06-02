@@ -6,8 +6,10 @@ import pickle
 hostname = socket.gethostname()
 IPAddr = socket.gethostbyname(hostname)
 print(IPAddr)
+# Define the dimensions of the array
+
 # Server configuration
-server = IPAddr
+server = "10.0.0.154"
 port = 5555
 
 # Create socket
@@ -65,7 +67,7 @@ while True:
     print("Connected to:", addr)
 
     # Add new player to the list
-    new_player = Player(len(players) * 100, len(players) * 100, 50, 50, (255, 0, 0))
+    new_player = Player(50,425, 50, 50, (255, 0, 0))
 
     print(f"{new_player.username} has joined")
     time.sleep(1)
