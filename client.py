@@ -9,15 +9,9 @@ WINDOW_HEIGHT = 800
 WINDOW_WIDTH = 800
 WINDOW_SIZE = 800
 GRID_SIZE = 20
-def draw_grid(win):
-    for x in range(0, WINDOW_SIZE, GRID_SIZE):
-        pygame.draw.line(win, BLACK, (x, 0), (x, WINDOW_SIZE), width=1)
-        for y in range(0, WINDOW_SIZE, GRID_SIZE):
-            pygame.draw.line(win, BLACK, (0, y), (WINDOW_SIZE, y), width=1)
 
 def redrawWindow(win, p, other_players):
     win.fill(WHITE)
-    draw_grid(win)
     if p:
         p.draw(win)
         for player in other_players:
