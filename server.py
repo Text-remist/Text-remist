@@ -3,9 +3,11 @@ import time
 from _thread import start_new_thread
 from player import Player
 import pickle
-
+hostname = socket.gethostname()
+IPAddr = socket.gethostbyname(hostname)
+print(IPAddr)
 # Server configuration
-server = "10.0.0.154"
+server = IPAddr
 port = 5555
 
 # Create socket
