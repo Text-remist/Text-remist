@@ -8,7 +8,8 @@ class Network:
         self.port = 5555
         self.addr = (self.server, self.port)
         self.p = self.connect()
-
+    def server_ip(self):
+        return self.server
     def getP(self):
         return self.p
 
