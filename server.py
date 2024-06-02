@@ -1,4 +1,5 @@
 import socket
+import time
 from _thread import start_new_thread
 from player import Player
 import pickle
@@ -63,6 +64,11 @@ while True:
     print("Connected to:", addr)
 
     # Add new player to the list
-    new_player = Player(len(players) * 100, len(players) * 100, 50, 50, (255, 0, 0))
+    username = input("Enter your username: ")
+    new_player = Player(len(players) * 100, len(players) * 100, 50, 50, (255, 0, 0), username)
+
+    print(f"{new_player.username} has joined")
+    time.sleep(1)
     players.append(new_player)
+    print(players)
     start_new_thread(threaded_client, (conn, len(players) - 1))
