@@ -1,26 +1,28 @@
-import random
 
 import pygame
 from network import Network
-from player import Player
-
+BLACK = (0, 0, 0)
+WHITE = (200, 200, 200)
 # Initialize Pygame
 pygame.init()
-width = 1920
-height = 960
-def redrawWindow(win, player, other_players):
-    # Fill the window with white color
-    win.fill((255,255,255))
+WINDOW_HEIGHT = 800
+WINDOW_WIDTH = 800
+WINDOW_SIZE = 800
+GRID_SIZE = 20
+def draw_grid(win):
+    for x in range(0, WINDOW_SIZE, GRID_SIZE):
+        pygame.draw.line(win, BLACK, (x, 0), (x, WINDOW_SIZE), width=1)
+        for y in range(0, WINDOW_SIZE, GRID_SIZE):
+            pygame.draw.line(win, BLACK, (0, y), (WINDOW_SIZE, y), width=1)
 
-    player.draw(win)
-
-    # Draw other players
-    for p in other_players:
+def redrawWindow(win, p, other_players):
+    win.fill(WHITE)
+    draw_grid(win)
+    if p:
         p.draw(win)
-
-    # Update the display
+        for player in other_players:
+            player.draw(win)
     pygame.display.update()
-    print("HI")
 
 def main():
     server_number = 0
@@ -41,17 +43,18 @@ def main():
     # Constants for the window dimensions
 
     # Set up the display window
-    win = pygame.display.set_mode((width, height))
+    win = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+
     pygame.display.set_caption("Client")
     run = True  # Assume this retrieves the initial player state
     clock = pygame.time.Clock()
-    overworld_1 = pygame.mixer.Sound("./Music/We're Bird People Now.ogg")
+    overworld_1 = pygame.mixer.Sound("./Music/BirdPeople.ogg")
     overworld_1.play(-1)
     while run:
         clock.tick(60)  # Cap the frame rate at 60 FPS
-
         try:
-            other_players = n.send(p)
+            if p:
+                other_players = n.send(p)
         except Exception as e:
             print(f"Error: {e}")
             run = False
@@ -60,10 +63,9 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
-
-        p.move()
-
-        redrawWindow(win, p, other_players)
+        if p:
+            p.move()
+            redrawWindow(win, p, other_players)
 
     pygame.quit()
 

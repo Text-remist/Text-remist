@@ -3,15 +3,15 @@ import time
 from _thread import start_new_thread
 from player import Player
 import pickle
-hostname = socket.gethostname()
-IPAddr = socket.gethostbyname(hostname)
-print(IPAddr)
+import json
+with open("large_array.json", "r") as file:
+    map_data = json.load(file)
 # Define the dimensions of the array
 
 # Server configuration
 server = "10.0.0.154"
 port = 5555
-
+BLOCKSIZE = 20
 # Create socket
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -30,6 +30,7 @@ players = []
 
 
 def threaded_client(conn, player_index):
+    # Send both the player object and the map data to the client
     conn.send(pickle.dumps(players[player_index]))
     reply = ""
 
@@ -46,7 +47,6 @@ def threaded_client(conn, player_index):
 
             # Reply with the current list of players
             reply = players[:player_index] + players[player_index + 1:]
-
 
             conn.sendall(pickle.dumps(reply))
         except Exception as e:
@@ -67,8 +67,8 @@ while True:
     print("Connected to:", addr)
 
     # Add new player to the list
-    new_player = Player(50,425, 50, 50, (255, 0, 0))
-
+    username = f"Player {len(players) +1}"
+    new_player = Player(0,0, BLOCKSIZE, BLOCKSIZE, (255, 0, 0), username)
     print(f"{new_player.username} has joined")
     time.sleep(1)
     players.append(new_player)
