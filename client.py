@@ -17,7 +17,7 @@ def main():
     p = n.getP()
     if not p:
         pygame.quit()
-        print("Unable to connect to the server.")
+        print(f"Unable to connect to the server -{n.server_ip()}-")
         return
 
 
@@ -46,6 +46,7 @@ def main():
                 run = False
 
         p.move()
+
         redrawWindow(win, p, other_players)
 
     pygame.quit()
