@@ -30,6 +30,7 @@ def threaded_client(conn, player_index):
     reply = ""
 
     while True:
+        time.sleep(0.001)
         try:
             data = conn.recv(2048)
             if not data:
@@ -42,8 +43,6 @@ def threaded_client(conn, player_index):
             # Reply with the current list of players
             reply = players[:player_index] + players[player_index + 1:]
 
-            print(f"Received from player {player_index}: {data}")
-            print(f"Sending to player {player_index}: {reply}")
 
             conn.sendall(pickle.dumps(reply))
         except Exception as e:
@@ -64,8 +63,7 @@ while True:
     print("Connected to:", addr)
 
     # Add new player to the list
-    username = input("Enter your username: ")
-    new_player = Player(len(players) * 100, len(players) * 100, 50, 50, (255, 0, 0), username)
+    new_player = Player(len(players) * 100, len(players) * 100, 50, 50, (255, 0, 0))
 
     print(f"{new_player.username} has joined")
     time.sleep(1)
