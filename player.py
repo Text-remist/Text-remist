@@ -1,7 +1,7 @@
 import pygame
 
 class Player():
-    def __init__(self, x, y, width, height, color, username):
+    def __init__(self, x, y, width, height, color):
         self.x = x
         self.y = y
         self.width = width
@@ -9,8 +9,7 @@ class Player():
         self.color = color
         self.rect = (x,y,width,height)
         self.vel = 3
-        self.username = username
-
+        self.username = "John"
     def draw(self, win):
         font = pygame.font.SysFont("Arial", 30)  # You can choose any font and size
         text_surface = font.render(self.username, True, (0, 0, 0))  # Render the username text with white color
