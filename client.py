@@ -1,66 +1,74 @@
+import random
+import socket
+import threading
+import json
+import time
 
-import pygame
-from network import Network
-BLACK = (0, 0, 0)
-WHITE = (200, 200, 200)
-# Initialize Pygame
-pygame.init()
-WINDOW_HEIGHT = 800
-WINDOW_WIDTH = 800
-WINDOW_SIZE = 800
-GRID_SIZE = 20
+HEADER = 64
+PORT = 5050
+FORMAT = 'utf-8'
+DISCONNECT_MESSAGE = "!DISCONNECT"
+SERVER = "192.165.145.1"
+ADDR = (SERVER, PORT)
+connected = False
+connected_clients = {}
 
-def redrawWindow(win, p, other_players):
-    win.fill(WHITE)
-    if p:
-        p.draw(win)
-        for player in other_players:
-            player.draw(win)
-    pygame.display.update()
+client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-def main():
-    server_number = 0
-    servers = []
-    addr = input("Server ADDRESS:     ")
-    n = Network(addr)
-    print(n.server)
-    p = n.getP()
+def start():
+    global connected
+    try:
+        client.connect(ADDR)
+        connected = True
+    except ConnectionRefusedError:
+        print("Server Down")
+        connected = False
 
-    # Check if the player object is retrieved successfully
-    if p:
-        print("Connected to the server successfully.")
-    else:
-        pygame.quit()
-        print(f"Unable to connect to the server - {n.server}:{n.port}")
-        return
+    print("[CLIENT] CONNECTING TO SERVER")
 
-    # Constants for the window dimensions
-
-    # Set up the display window
-    win = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-
-    pygame.display.set_caption("Client")
-    run = True  # Assume this retrieves the initial player state
-    clock = pygame.time.Clock()
-    overworld_1 = pygame.mixer.Sound("./Music/BirdPeople.ogg")
-    overworld_1.play(-1)
-    while run:
-        clock.tick(60)  # Cap the frame rate at 60 FPS
+    def disconnect():
+        global connected
+        print("[CLIENT] DISCONNECTING FROM SERVER\n")
         try:
-            if p:
-                other_players = n.send(p)
+            client.send(DISCONNECT_MESSAGE.encode(FORMAT))
+        except Exception:
+            print("[CLIENT] SERVER CONNECTION FAILED")
+        connected = False
+    username = input("Enter Username: ")
+    print(json.dumps(username))
+    client.send(json.dumps(username).encode(FORMAT))
+    while connected:
+        time.sleep(0.01)
+        try:
+            msg = client.recv(HEADER).decode(FORMAT)
+            if msg != DISCONNECT_MESSAGE:
+                data = json.loads(msg)
+                print("[CLIENT] Server Data Received")
+                data['age'] = random.randint(0, 15)
+                print("[CLIENT] New Data:", data)
+
+                age_update_msg = {'age_update': data['age']}
+
+                client.send(json.dumps(age_update_msg).encode(FORMAT))
+                print("[CLIENT] Server Data Sent\n")
+            else:
+                connected = False
+                disconnect()
+                print("[CLIENT] REASON: BLOCKED")
+                return 0
+        except json.JSONDecodeError as e:
+            print(f"Failed to decode JSON: {e}")
+            return 0
+        except WindowsError:
+            connected = False
+            disconnect()
+        except ConnectionResetError:
+            connected = False
+            disconnect()
         except Exception as e:
-            print(f"Error: {e}")
-            run = False
-            break
+            print(f"An error occurred: {e}")
+        except KeyboardInterrupt:
+            connected = False
+            disconnect()
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                run = False
-        if p:
-            p.move()
-            redrawWindow(win, p, other_players)
-
-    pygame.quit()
-
-main()
+start()
