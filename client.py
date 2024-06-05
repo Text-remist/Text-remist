@@ -54,7 +54,7 @@ def start():
                     print(f"({my_player.x}, {my_player.y})")
                     if all_players is not None:
                         # Ensure all_players excludes my_player by comparing with unique attribute (e.g., username)
-                        all_players = [player for player in all_players if player.username != my_player.username]
+                        all_players = [player for player in all_players if hasattr(player, 'username') and player.username != my_player.username]
                         for player in all_players:
                             print(f"{player.username} is located at ({player.x}, {player.y})")
 
