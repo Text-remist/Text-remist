@@ -1,10 +1,10 @@
 import random
 import socket
 import threading
-import json
+import pickle
 import time
 
-HEADER = 64
+HEADER = 50000
 PORT = 5050
 FORMAT = 'utf-8'
 DISCONNECT_MESSAGE = "!DISCONNECT"
@@ -30,34 +30,39 @@ def start():
         global connected
         print("[CLIENT] DISCONNECTING FROM SERVER\n")
         try:
-            client.send(DISCONNECT_MESSAGE.encode(FORMAT))
+            client.send(DISCONNECT_MESSAGE)
         except Exception:
             print("[CLIENT] SERVER CONNECTION FAILED")
         connected = False
     username = input("Enter Username: ")
-    print(json.dumps(username))
-    client.send(json.dumps(username).encode(FORMAT))
+    client.send(pickle.dumps(username))
     while connected:
-        time.sleep(0.01)
         try:
-            msg = client.recv(HEADER).decode(FORMAT)
+            msg = client.recv(HEADER)
             if msg != DISCONNECT_MESSAGE:
-                data = json.loads(msg)
+                data = pickle.loads(msg)
+                my_player = data["player"]
+                all_players = data["all_players"]
+
+                print(f"({my_player.x}, {my_player.y})")
+                if all_players is not None:
+                    # Ensure all_players excludes my_player by comparing with unique attribute (e.g., username)
+                    all_players = [player for player in all_players if player.username != my_player.username]
+                    for player in all_players:
+                        print(f"{player.username} is located at ({player.x}, {player.y})")
+
                 print("[CLIENT] Server Data Received")
-                data['age'] = random.randint(0, 15)
-                print("[CLIENT] New Data:", data)
-
-                age_update_msg = {'age_update': data['age']}
-
-                client.send(json.dumps(age_update_msg).encode(FORMAT))
-                print("[CLIENT] Server Data Sent\n")
+                new_player_data = {
+                    "player_update": {"username": my_player.username, "x": my_player.x, "y": my_player.y}}
+                client.send(pickle.dumps(new_player_data))
+                print("[CLIENT] Client Data Sent")
             else:
                 connected = False
                 disconnect()
                 print("[CLIENT] REASON: BLOCKED")
                 return 0
-        except json.JSONDecodeError as e:
-            print(f"Failed to decode JSON: {e}")
+        except pickle.PickleError as e:
+            print(f"Failed to decode pickle: {e}")
             return 0
         except WindowsError:
             connected = False
