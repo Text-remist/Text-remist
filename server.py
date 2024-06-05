@@ -1,76 +1,143 @@
+import random
 import socket
+import threading, wave, pyaudio,pickle,struct
 import time
-from _thread import start_new_thread
+from pyfiglet import Figlet
 from player import Player
-import pickle
 import json
-with open("large_array.json", "r") as file:
-    map_data = json.load(file)
-# Define the dimensions of the array
 
-# Server configuration
-server = "10.0.0.154"
-port = 5555
+# Constants
 BLOCKSIZE = 20
-# Create socket
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+HEADER = 40000  # Adjusted to a more reasonable size for a header
+PORT = 5050
+SERVER = "192.165.145.1"
+ADDR = (SERVER, PORT)
+FORMAT = 'utf-8'
+DISCONNECT_MESSAGE = "!DISCONNECT"
 
-# Bind the socket to the address and port
-try:
-    s.bind((server, port))
-except socket.error as e:
-    print(str(e))
-    exit()
+# Load blocked list from JSON file
+with open('blocked.json', 'r') as file2:
+    BLOCKEDLIST_json = json.load(file2)
 
-s.listen()
-print("Waiting for a connection, Server Started")
+# Serialize the Python object and save it to a pickle file
+with open('blocklist.pkl', 'wb') as file:
+    pickle.dump(BLOCKEDLIST_json, file)
 
-# Initialize an empty list to store player objects
+# Load the serialized object from the pickle file
+with open('blocklist.pkl', 'rb') as file:
+    BLOCKEDLST = pickle.load(file)
+print(BLOCKEDLST)
+
+# Global list to keep track of connected players
 players = []
 
+# Setup the server
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.bind(ADDR)
 
-def threaded_client(conn, player_index):
-    # Send both the player object and the map data to the client
-    conn.send(pickle.dumps(players[player_index]))
-    reply = ""
+def handle_client(conn, addr):
+    global players
+    connected = True
+
+    # Initial check if the client's IP is blocked
+    blocked = any(addr[0] == blocked_address for blocked_address in BLOCKEDLST)
+
+    if blocked:
+        print(f"[SERVER] CLIENT ({addr[0]}) IS ON BLOCKLIST\n[SERVER] DISCONNECTING BLOCKED CLIENT")
+        conn.send(pickle.dumps(DISCONNECT_MESSAGE))
+        conn.close()
+        return
+
+    # Read the initial username from the client
+    try:
+        username = pickle.loads(conn.recv(HEADER))
+    except Exception as e:
+        print(f"[ERROR] Error receiving username: {e}")
+        conn.close()
+        return
+
+    # Add new player
+    new_player = Player(0, 0, BLOCKSIZE, BLOCKSIZE, (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)), username)
+    players.append(new_player)
+    player_index = len(players) - 1
+
+    print(f"[NEW CONNECTION] {addr} as {new_player.username}")
+    CHUNK = 1024
+    wf = wave.open("Persona.wav", 'rb')
+
+    p = pyaudio.PyAudio()
+    print('server listening at', (SERVER, (PORT - 1)))
+
+    stream = p.open(format=p.get_format_from_width(wf.getsampwidth()),
+                    channels=wf.getnchannels(),
+                    rate=wf.getframerate(),
+                    input=True,
+                    frames_per_buffer=CHUNK)
+
+    while connected:
+        music_data = wf.readframes(CHUNK)
+        music_data = pickle.dumps(music_data)
+        music_data = struct.pack("Q", len(music_data)) + music_data
+        try:
+            # Prepare the data to send to the client
+            all_players = [p for i, p in enumerate(players) if i != player_index]
+            server_data = {"all_players": all_players, "player": new_player, "music_data": music_data}
+            conn.send(pickle.dumps(server_data))
+
+            # Receive data from the client
+            received = conn.recv(HEADER)
+            if received:
+                if received == pickle.dumps(DISCONNECT_MESSAGE):
+                    print(f"[CLIENT] {addr} DISCONNECTED")
+                    connected = False
+                else:
+                    try:
+                        received_data = pickle.loads(received)
+                        if 'player_update' in received_data:
+                            update = received_data['player_update']
+                            for p in players:
+                                if p.username == update['username']:
+                                    p.x = update['x']
+                                    p.y = update['y']
+                    except Exception as e:
+                        print(f"[ERROR] Error processing received data: {e}")
+            else:
+                connected = False
+
+        except Exception as e:
+            print(f"[ERROR] {e}")
+            connected = False
+
+    # Remove player when they disconnect
+    print(f"[CLIENT] {addr} HAS DISCONNECTED")
+    players.pop(player_index)
+    conn.close()
+
+
+def shutdown():
+    print("\n[SERVER] DISCONNECTING CLIENT FROM SERVER\n")
+    server.close()
+
+
+def print_act_connections():
+    while True:
+        time.sleep(5)
+        print(f"[ACTIVE CONNECTIONS] {len(players)}")
+
+
+def start():
+    server.listen()
+    print(f"[SERVER] SERVER RUNNING ON {SERVER}")
+    threading.Thread(target=print_act_connections).start()
 
     while True:
-        time.sleep(0.001)
-        try:
-            data = conn.recv(2048)
-            if not data:
-                print("Disconnected")
-                break
-
-            data = pickle.loads(data)
-            players[player_index] = data
-
-            # Reply with the current list of players
-            reply = players[:player_index] + players[player_index + 1:]
-
-            conn.sendall(pickle.dumps(reply))
-        except Exception as e:
-            print(f"Error: {e}")
-            break
-
-    print(f"Lost connection with player {player_index}")
-    conn.close()
-    # Remove the player from the list when they disconnect
-    del players[player_index]
-    # Adjust player indices
-    for i in range(player_index, len(players)):
-        start_new_thread(threaded_client, (players[i].conn, i))
+        conn, addr = server.accept()
+        thread = threading.Thread(target=handle_client, args=(conn, addr))
+        thread.start()
 
 
-while True:
-    conn, addr = s.accept()
-    print("Connected to:", addr)
-
-    # Add new player to the list
-    username = f"Player {len(players) +1}"
-    new_player = Player(0,0, BLOCKSIZE, BLOCKSIZE, (255, 0, 0), username)
-    print(f"{new_player.username} has joined")
-    time.sleep(1)
-    players.append(new_player)
-    print(players)
-    start_new_thread(threaded_client, (conn, len(players) - 1))
+# Main entry point
+f = Figlet(font='slant')
+print(f.renderText('Online Server'))
+print("[SERVER] SERVER IS STARTING")
+start()
