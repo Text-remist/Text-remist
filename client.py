@@ -77,8 +77,6 @@ def start():
             except ConnectionResetError:
                 connected = False
                 disconnect()
-            except Exception as e:
-                print(f"An error occurred: {e}")
             except KeyboardInterrupt:
                 connected = False
                 disconnect()
