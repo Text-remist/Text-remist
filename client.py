@@ -17,63 +17,70 @@ client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 def start():
     global connected
-    try:
-        client.connect(ADDR)
-        connected = True
-    except ConnectionRefusedError:
-        print("Server Down")
-        connected = False
-
-    print("[CLIENT] CONNECTING TO SERVER")
-
-    def disconnect():
-        global connected
-        print("[CLIENT] DISCONNECTING FROM SERVER\n")
-        try:
-            client.send(DISCONNECT_MESSAGE)
-        except Exception:
-            print("[CLIENT] SERVER CONNECTION FAILED")
-        connected = False
     username = input("Enter Username: ")
-    client.send(pickle.dumps(username))
-    while connected:
+    if username == "quit":
+        return 0
+    else:
         try:
-            msg = client.recv(HEADER)
-            if msg != DISCONNECT_MESSAGE:
-                data = pickle.loads(msg)
-                my_player = data["player"]
-                all_players = data["all_players"]
+            client.connect(ADDR)
+            connected = True
+            print("[CLIENT] CONNECTING TO SERVER")
+        except ConnectionRefusedError:
+            print("Server Down")
+            connected = False
+        except OSError:
+            print("Server Down")
+            connected = False
 
-                print(f"({my_player.x}, {my_player.y})")
-                if all_players is not None:
-                    # Ensure all_players excludes my_player by comparing with unique attribute (e.g., username)
-                    all_players = [player for player in all_players if player.username != my_player.username]
-                    for player in all_players:
-                        print(f"{player.username} is located at ({player.x}, {player.y})")
 
-                print("[CLIENT] Server Data Received")
-                new_player_data = {
-                    "player_update": {"username": my_player.username, "x": my_player.x, "y": my_player.y}}
-                client.send(pickle.dumps(new_player_data))
-                print("[CLIENT] Client Data Sent")
-            else:
+        def disconnect():
+            global connected
+            print("[CLIENT] DISCONNECTING FROM SERVER\n")
+            try:
+                client.send(DISCONNECT_MESSAGE)
+            except Exception:
+                print("[CLIENT] SERVER CONNECTION FAILED")
+            connected = False
+        if connected:
+            client.send(pickle.dumps(username))
+        while connected:
+            try:
+                msg = client.recv(HEADER)
+                if msg != DISCONNECT_MESSAGE:
+                    data = pickle.loads(msg)
+                    my_player = data["player"]
+                    all_players = data["all_players"]
+
+                    print(f"({my_player.x}, {my_player.y})")
+                    if all_players is not None:
+                        # Ensure all_players excludes my_player by comparing with unique attribute (e.g., username)
+                        all_players = [player for player in all_players if player.username != my_player.username]
+                        for player in all_players:
+                            print(f"{player.username} is located at ({player.x}, {player.y})")
+
+                    print("[CLIENT] Server Data Received")
+                    new_player_data = {
+                        "player_update": {"username": my_player.username, "x": my_player.x, "y": my_player.y}}
+                    client.send(pickle.dumps(new_player_data))
+                    print("[CLIENT] Client Data Sent")
+                else:
+                    connected = False
+                    disconnect()
+                    print("[CLIENT] REASON: BLOCKED")
+                    return 0
+            except pickle.PickleError as e:
+                print(f"Failed to decode pickle: {e}")
+                return 0
+            except OSError:
                 connected = False
                 disconnect()
-                print("[CLIENT] REASON: BLOCKED")
-                return 0
-        except pickle.PickleError as e:
-            print(f"Failed to decode pickle: {e}")
-            return 0
-        except OSError:
-            connected = False
-            disconnect()
-        except ConnectionResetError:
-            connected = False
-            disconnect()
-        except Exception as e:
-            print(f"An error occurred: {e}")
-        except KeyboardInterrupt:
-            connected = False
-            disconnect()
+            except ConnectionResetError:
+                connected = False
+                disconnect()
+            except Exception as e:
+                print(f"An error occurred: {e}")
+            except KeyboardInterrupt:
+                connected = False
+                disconnect()
 
 start()
