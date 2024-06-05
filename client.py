@@ -64,7 +64,7 @@ def start():
         except pickle.PickleError as e:
             print(f"Failed to decode pickle: {e}")
             return 0
-        except WindowsError:
+        except OSError:
             connected = False
             disconnect()
         except ConnectionResetError:
