@@ -46,15 +46,22 @@ def start():
         while connected:
             try:
                 msg = client.recv(HEADER)
-                if msg != DISCONNECT_MESSAGE:
-                    data = pickle.loads(msg)
-                    my_player = data["player"]
-                    all_players = data["all_players"]
+                print(msg)
+                if msg.decode(FORMAT) != DISCONNECT_MESSAGE:
+                    try:
+                        data = pickle.loads(msg)
+                    except pickle.UnpicklingError as e:
+                        print(f"Failed to decode pickle: {e}")
+                        continue  # Skip invalid data
+
+                    my_player = data.get("player")
+                    all_players = data.get("all_players")
 
                     print(f"({my_player.x}, {my_player.y})")
                     if all_players is not None:
                         # Ensure all_players excludes my_player by comparing with unique attribute (e.g., username)
                         all_players = [player for player in all_players if hasattr(player, 'username') and player.username != my_player.username]
+
                         for player in all_players:
                             print(f"{player.username} is located at ({player.x}, {player.y})")
 
@@ -77,6 +84,8 @@ def start():
             except ConnectionResetError:
                 connected = False
                 disconnect()
+            except Exception as e:
+                print(f"An error occurred: {e}")
             except KeyboardInterrupt:
                 connected = False
                 disconnect()
